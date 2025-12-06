@@ -156,4 +156,23 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
     }
 });
 
+// LIST FILES SHARED WITH ME
+router.get('/shared-with-me', authMiddleware, async (req, res) => {
+    try {
+        const [files] = await pool.execute(
+            `SELECT f.id, f.uuid, f.filename as name, f.size, f.file_type as type, f.upload_date as date, u.name as owner 
+             FROM shares s
+             JOIN files f ON s.file_id = f.id
+             JOIN users u ON f.user_id = u.id
+             WHERE s.shared_with_email = ?
+             ORDER BY s.created_at DESC`,
+            [req.user.email]
+        );
+        res.json(files);
+    } catch (error) {
+        console.error('Shared List Error:', error);
+        res.status(500).json({ error: 'Failed to fetch shared files' });
+    }
+});
+
 module.exports = router;

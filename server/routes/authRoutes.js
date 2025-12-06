@@ -26,7 +26,7 @@ router.post('/register', async (req, res) => {
             [name, email, hashedPassword]
         );
 
-        const token = jwt.sign({ id: result.insertId }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
+        const token = jwt.sign({ id: result.insertId, email }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
 
         res.cookie('token', token, {
             httpOnly: true,
@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
 
         res.cookie('token', token, {
             httpOnly: true,

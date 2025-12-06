@@ -1,24 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Share2, FileText } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import FileCard from '../components/files/FileCard';
 import FileUpload from '../components/upload/FileUpload';
 import ShareModal from '../components/modals/ShareModal';
 import { files as filesApi } from '../lib/api';
+import { toast } from 'sonner';
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState('my-files'); // 'my-files' | 'shared'
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [activeShareFile, setActiveShareFile] = useState(null);
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchFiles = async () => {
+    setIsLoading(true);
     try {
-      const data = await filesApi.list();
+      let data;
+      if (activeTab === 'my-files') {
+        data = await filesApi.list();
+      } else {
+        data = await filesApi.listShared();
+      }
       setFiles(data);
     } catch (error) {
       console.error("Failed to fetch files:", error);
+      toast.error("Failed to load files");
     } finally {
       setIsLoading(false);
     }
@@ -26,15 +35,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchFiles();
-  }, []);
+  }, [activeTab]);
 
   return (
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Files</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage and share your documents.</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {activeTab === 'my-files' ? 'My Files' : 'Shared with Me'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {activeTab === 'my-files' ? 'Manage and share your documents.' : 'Files others have shared with you.'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => setIsUploadOpen(true)}>
@@ -42,6 +55,30 @@ export default function Dashboard() {
             Upload File
           </Button>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('my-files')}
+          className={`pb-3 text-sm font-medium transition-colors border-b-2 px-1 ${
+            activeTab === 'my-files' 
+              ? 'border-indigo-600 text-indigo-600' 
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          My Files
+        </button>
+        <button
+          onClick={() => setActiveTab('shared')}
+          className={`pb-3 text-sm font-medium transition-colors border-b-2 px-1 ${
+            activeTab === 'shared' 
+              ? 'border-indigo-600 text-indigo-600' 
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Shared with Me
+        </button>
       </div>
 
       {/* Toolbar */}
@@ -61,15 +98,22 @@ export default function Dashboard() {
       </div>
 
       {/* File Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {files.map((file) => (
-          <FileCard 
-            key={file.id} 
-            file={file} 
-            onShare={() => setActiveShareFile(file)}
-          />
-        ))}
-      </div>
+      {files.length === 0 && !isLoading ? (
+        <div className="text-center py-20 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+           <p>No files found.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {files.map((file) => (
+            <FileCard 
+              key={file.id} 
+              file={file} 
+              onShare={activeTab === 'my-files' ? () => setActiveShareFile(file) : undefined}
+              showOwner={activeTab === 'shared'}
+            />
+          ))}
+        </div>
+      )}
 
       <FileUpload 
         isOpen={isUploadOpen} 

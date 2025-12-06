@@ -55,4 +55,5 @@ export const files = {
     });
   },
   getDownloadLink: (id) => request(`/files/${id}/download`),
+  listShared: () => request('/files/shared-with-me'),
 };

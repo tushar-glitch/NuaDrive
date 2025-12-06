@@ -48,7 +48,7 @@ const getIconColor = (type) => {
 import { useNavigate } from 'react-router-dom';
 import { files as filesApi } from '../../lib/api';
 
-export default function FileCard({ file, onShare }) {
+export default function FileCard({ file, onShare, showOwner }) {
   const Icon = getFileIcon(file.type);
   const colorClass = getIconColor(file.type);
   const navigate = useNavigate();
@@ -67,17 +67,19 @@ export default function FileCard({ file, onShare }) {
         <div className={`p-3 rounded-lg transition-colors ${colorClass}`}>
           <Icon className="h-6 w-6" />
         </div>
-        <Button 
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent opening file
-            onShare();
-          }} 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 -mr-2 text-slate-400 hover:text-indigo-600"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        {onShare && (
+          <Button 
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent opening file
+              onShare();
+            }} 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 -mr-2 text-slate-400 hover:text-indigo-600"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       
       <div className="mt-4">
@@ -97,6 +99,11 @@ export default function FileCard({ file, onShare }) {
             {new Date(file.date).toLocaleDateString()}
           </span>
         </div>
+        {showOwner && (
+            <div className="mt-2 text-xs text-indigo-600 bg-indigo-50 inline-block px-2 py-1 rounded-md">
+                Shared by {file.owner}
+            </div>
+        )}
       </div>
     </div>
   );
