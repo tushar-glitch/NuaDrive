@@ -14,7 +14,7 @@ export default function Navbar() {
             <div className="p-2 bg-indigo-50 rounded-lg">
               <Cloud className="h-6 w-6 text-indigo-600" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">Nua</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900">NuaDrive</span>
           </Link>
           
           <div className="flex items-center gap-4">

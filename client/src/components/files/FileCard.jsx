@@ -54,8 +54,8 @@ export default function FileCard({ file, onShare, showOwner }) {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-      // Navigate to the public viewer page using the UUID
-      navigate(`/file/${file.uuid}`);
+      // Open in new tab
+      window.open(`/file/${file.uuid}`, '_blank');
   };
 
   return (

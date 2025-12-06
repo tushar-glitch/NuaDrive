@@ -9,7 +9,7 @@ export default function AuthLayout({ children, title, subtitle }) {
             <div className="p-2 bg-indigo-50 rounded-lg">
               <Cloud className="h-8 w-8 text-indigo-600" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">Nua</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-900">NuaDrive</span>
         </Link>
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
           {title}

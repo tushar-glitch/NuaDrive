@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// import { request } from '../lib/api';
+import { auth } from '../../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -23,18 +23,16 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-       // Optional: specific logout endpoint if needed later
-       // await request('/auth/logout', { method: 'POST' });
-       
-       // For now, just clear client state as cookie is httpOnly 
-       // (Real logout needs backend to clear cookie, let's add that endpoint soon)
+       await auth.logout();
        setUser(null);
        localStorage.removeItem('user');
-       
-       // Force reload to clear any memory states or redirect
        window.location.href = '/login';
     } catch (error) {
        console.error("Logout failed", error);
+       // Fallback checkout even if API fails
+       setUser(null);
+       localStorage.removeItem('user');
+       window.location.href = '/login';
     }
   };
 

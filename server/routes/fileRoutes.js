@@ -93,9 +93,12 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
     }
 });
 
-// Public Shared File Endpoint
-router.get('/shared/:uuid', async (req, res) => {
+// Public Shared File Endpoint (Now Restricted to Logged-in Users)
+router.get('/shared/:uuid', authMiddleware, async (req, res) => {
     try {
+        // Prevent caching to ensure auth check happens every time
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        
         const [files] = await pool.execute(
             'SELECT filename as name, size, file_type as type, upload_date as date, r2_key FROM files WHERE uuid = ?', 
             [req.params.uuid]
@@ -110,6 +113,7 @@ router.get('/shared/:uuid', async (req, res) => {
         const command = new GetObjectCommand({
             Bucket: process.env.B2_BUCKET_NAME,
             Key: file.r2_key,
+            ResponseContentDisposition: `attachment; filename="${file.name}"`,
         });
 
         const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });

@@ -129,9 +129,41 @@ export default function Dashboard() {
 
       {/* File Grid */}
       {files.length === 0 && !isLoading ? (
-        <div className="text-center py-20 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-           <p>No files found.</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <div className="p-4 bg-white rounded-full shadow-sm mb-4">
+                 {activeTab === 'my-files' ? (
+                     <FileText className="h-8 w-8 text-indigo-200" />
+                 ) : (
+                     <Share2 className="h-8 w-8 text-indigo-200" />
+                 )}
+            </div>
+            <h3 className="text-lg font-medium text-slate-900">
+                {activeTab === 'my-files' ? 'No files uploaded yet' : 'No shared files'}
+            </h3>
+            <p className="text-slate-500 max-w-sm mt-1 mb-6">
+                {activeTab === 'my-files' 
+                    ? 'Upload your first file to get started and share it with others.' 
+                    : 'Files shared with you by other users will appear here.'}
+            </p>
+            {activeTab === 'my-files' && (
+                <Button onClick={() => setIsUploadOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload File
+                </Button>
+            )}
         </div>
+      ) : filteredFiles.length === 0 && !isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <Search className="h-12 w-12 text-slate-300 mb-2" />
+                <p className="text-slate-500 font-medium">No results found</p>
+                <p className="text-slate-400 text-sm">Try adjusting your search or filters</p>
+                <button 
+                    onClick={() => { setSearchTerm(''); setFilterType('all'); }}
+                    className="mt-4 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                    Clear filters
+                </button>
+          </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredFiles.map((file) => (

@@ -22,7 +22,9 @@ export async function request(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'Something went wrong');
+    const error = new Error(data.error || 'Something went wrong');
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -37,6 +39,7 @@ export const auth = {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
   }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
 };
 
 export const files = {
