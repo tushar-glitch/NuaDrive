@@ -127,4 +127,33 @@ router.get('/shared/:uuid', async (req, res) => {
     }
 });
 
+// Invite User to File
+router.post('/:id/share', authMiddleware, async (req, res) => {
+    const { email } = req.body;
+    const fileId = req.params.id;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+
+    try {
+        // Verify ownership
+        const [files] = await pool.execute('SELECT * FROM files WHERE id = ? AND user_id = ?', [fileId, req.user.id]);
+        if (files.length === 0) {
+            return res.status(404).json({ error: 'File not found or access denied' });
+        }
+
+        // Add to shares table
+        await pool.execute(
+            'INSERT INTO shares (file_id, shared_with_email) VALUES (?, ?)',
+            [fileId, email]
+        );
+
+        res.json({ message: `Invite sent to ${email}` });
+    } catch (error) {
+        console.error('Share Error:', error);
+        res.status(500).json({ error: 'Failed to share file' });
+    }
+});
+
 module.exports = router;

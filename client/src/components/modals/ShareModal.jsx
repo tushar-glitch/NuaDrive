@@ -1,19 +1,41 @@
 import React, { useState } from 'react';
 import { Copy, Check, UserPlus, Link as LinkIcon, Globe, ShieldAlert } from 'lucide-react';
+import { toast } from 'sonner';
 import Modal from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
+import { request } from '../../lib/api';
 
 export default function ShareModal({ isOpen, onClose, file }) {
   const [copied, setCopied] = useState(false);
-  const [accessLevel, setAccessLevel] = useState('viewer');
+  const [email, setEmail] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const shareUrl = file ? `${window.location.origin}/file/${file.uuid}` : '';
 
   const handleCopyLink = () => {
-    // In a real app, this would be the actual share link
-    navigator.clipboard.writeText(`https://nua.share/f/${file?.id || '123'}`);
+    navigator.clipboard.writeText(shareUrl);
     setCopied(true);
+    toast.success('Link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleInvite = async () => {
+      if (!email) return;
+      setIsSending(true);
+      try {
+          await request(`/files/${file.id}/share`, {
+              method: 'POST',
+              body: JSON.stringify({ email })
+          });
+          toast.success(`Invite sent to ${email}`);
+          setEmail('');
+      } catch (error) {
+          toast.error(error.message);
+      } finally {
+          setIsSending(false);
+      }
   };
 
   return (
@@ -29,7 +51,7 @@ export default function ShareModal({ isOpen, onClose, file }) {
             <div className="flex gap-2">
                 <Input 
                     readOnly 
-                    value={`https://nua.share/f/${file?.id || '123'}`}
+                    value={shareUrl}
                     className="bg-slate-50 text-slate-500 font-mono text-xs"
                 />
                 <Button variant="outline" onClick={handleCopyLink} className="shrink-0 w-24">
@@ -48,7 +70,7 @@ export default function ShareModal({ isOpen, onClose, file }) {
             </div>
              <p className="text-xs text-slate-500 flex items-center gap-1">
                 <ShieldAlert className="h-3 w-3" />
-                Only users with an account can access this link.
+                Anyone with this link can view the file.
             </p>
         </div>
 
@@ -68,30 +90,14 @@ export default function ShareModal({ isOpen, onClose, file }) {
                 Invite People
             </Label>
             <div className="flex gap-2">
-                <Input placeholder="Enter email address..." />
-                <Button>
-                    Send Invite
+                <Input 
+                    placeholder="Enter email address..." 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
+                <Button onClick={handleInvite} disabled={!email || isSending}>
+                    {isSending ? 'Sending...' : 'Send Invite'}
                 </Button>
-            </div>
-        </div>
-
-        {/* People with Access List (Mock) */}
-        <div className="space-y-3 pt-2">
-            <h4 className="text-sm font-medium text-slate-900">People with access</h4>
-            
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium text-xs">
-                        YO
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-900">You (Owner)</p>
-                        <p className="text-xs text-slate-500">tushar@example.com</p>
-                    </div>
-                </div>
-                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                    Owner
-                </span>
             </div>
         </div>
       </div>
