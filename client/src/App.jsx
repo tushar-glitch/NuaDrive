@@ -6,6 +6,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import { AuthProvider } from './components/auth/AuthContext';
 
+import FileViewer from './pages/FileViewer';
+
 function App() {
   return (
     <AuthProvider>
@@ -35,6 +37,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/file/:uuid" element={<FileViewer />} />
             </Route>
           </Routes>
         </div>

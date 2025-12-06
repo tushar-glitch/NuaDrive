@@ -45,25 +45,22 @@ const getIconColor = (type) => {
   }
 };
 
+import { useNavigate } from 'react-router-dom';
 import { files as filesApi } from '../../lib/api';
 
 export default function FileCard({ file, onShare }) {
   const Icon = getFileIcon(file.type);
   const colorClass = getIconColor(file.type);
+  const navigate = useNavigate();
 
-  const handleDownload = async () => {
-    try {
-      // If we already have a signed url (optional optimization), but for now fetch fresh
-      const { downloadUrl } = await filesApi.getDownloadLink(file.id);
-      window.open(downloadUrl, '_blank');
-    } catch (error) {
-      console.error("Failed to get download link", error);
-    }
+  const handleCardClick = () => {
+      // Navigate to the public viewer page using the UUID
+      navigate(`/file/${file.uuid}`);
   };
 
   return (
     <div 
-      onClick={handleDownload}
+      onClick={handleCardClick}
       className="group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-indigo-100 cursor-pointer"
     >
       <div className="flex items-start justify-between">

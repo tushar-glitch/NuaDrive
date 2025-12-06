@@ -26,6 +26,7 @@ router.post('/upload', authMiddleware, upload.array('files'), async (req, res) =
         for (const file of req.files) {
             const fileExtension = file.originalname.split('.').pop();
             const r2Key = `${userId}/${crypto.randomUUID()}.${fileExtension}`;
+            const fileUuid = crypto.randomUUID();
             
             await s3Client.send(new PutObjectCommand({
                 Bucket: process.env.B2_BUCKET_NAME,
@@ -35,12 +36,13 @@ router.post('/upload', authMiddleware, upload.array('files'), async (req, res) =
             }));
 
             const [result] = await pool.execute(
-                'INSERT INTO files (user_id, filename, r2_key, file_type, size) VALUES (?, ?, ?, ?, ?)',
-                [userId, file.originalname, r2Key, fileExtension, file.size]
+                'INSERT INTO files (user_id, filename, r2_key, file_type, size, uuid) VALUES (?, ?, ?, ?, ?, ?)',
+                [userId, file.originalname, r2Key, fileExtension, file.size, fileUuid]
             );
 
             uploadedFiles.push({
                 id: result.insertId,
+                uuid: fileUuid,
                 name: file.originalname,
                 size: file.size,
                 date: new Date(),
@@ -58,7 +60,7 @@ router.post('/upload', authMiddleware, upload.array('files'), async (req, res) =
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const [files] = await pool.execute(
-            'SELECT id, filename as name, size, file_type as type, upload_date as date FROM files WHERE user_id = ? ORDER BY upload_date DESC',
+            'SELECT id, uuid, filename as name, size, file_type as type, upload_date as date FROM files WHERE user_id = ? ORDER BY upload_date DESC',
             [req.user.id]
         );
         res.json(files);
@@ -87,8 +89,41 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
 
         res.json({ downloadUrl: url });
     } catch (error) {
-        console.error('Download Error:', error);
         res.status(500).json({ error: 'Failed to generate download link' });
+    }
+});
+
+// Public Shared File Endpoint
+router.get('/shared/:uuid', async (req, res) => {
+    try {
+        const [files] = await pool.execute(
+            'SELECT filename as name, size, file_type as type, upload_date as date, r2_key FROM files WHERE uuid = ?', 
+            [req.params.uuid]
+        );
+        
+        if (files.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const file = files[0];
+        
+        const command = new GetObjectCommand({
+            Bucket: process.env.B2_BUCKET_NAME,
+            Key: file.r2_key,
+        });
+
+        const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+        res.json({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            date: file.date,
+            downloadUrl
+        });
+    } catch (error) {
+        console.error('Shared File Error:', error);
+        res.status(500).json({ error: 'Failed to retrieve shared file' });
     }
 });
 
