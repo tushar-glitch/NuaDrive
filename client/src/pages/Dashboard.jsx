@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import FileCard from '../components/files/FileCard';
+import FileUpload from '../components/upload/FileUpload';
 
 // Mock data for demonstration
 const MOCK_FILES = [
@@ -15,6 +16,8 @@ const MOCK_FILES = [
 ];
 
 export default function Dashboard() {
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -24,7 +27,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500 mt-1">Manage and share your documents.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button>
+          <Button onClick={() => setIsUploadOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Upload File
           </Button>
@@ -53,6 +56,11 @@ export default function Dashboard() {
           <FileCard key={file.id} file={file} />
         ))}
       </div>
+
+      <FileUpload 
+        isOpen={isUploadOpen} 
+        onClose={() => setIsUploadOpen(false)} 
+      />
     </div>
   );
 }
