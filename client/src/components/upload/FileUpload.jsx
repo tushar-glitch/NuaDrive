@@ -3,6 +3,7 @@ import { UploadCloud, File, X } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { files as filesApi } from '../../lib/api';
+import { toast } from 'sonner';
 
 export default function FileUpload({ isOpen, onClose }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -10,6 +11,7 @@ export default function FileUpload({ isOpen, onClose }) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+  // ... (keep drag handlers the same)
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -45,7 +47,7 @@ export default function FileUpload({ isOpen, onClose }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Upload Files">
+    <Modal isOpen={isOpen} onClose={() => !isUploading && onClose(false)} title="Upload Files">
       <div className="space-y-4">
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -76,7 +78,7 @@ export default function FileUpload({ isOpen, onClose }) {
               <span className="font-semibold text-indigo-600">Click to upload</span> or drag and drop
             </div>
             <p className="text-xs text-slate-500">
-              PDF, Images, Video, Audio (max 10MB)
+              PDF, Images, Video, Audio (max 50MB)
             </p>
           </div>
         </div>
@@ -109,14 +111,17 @@ export default function FileUpload({ isOpen, onClose }) {
           </Button>
           <Button disabled={files.length === 0 || isUploading} onClick={async () => {
               setIsUploading(true);
+              const toastId = toast.loading('Uploading files...');
               const formData = new FormData();
               files.forEach(file => formData.append('files', file));
               try {
                   await filesApi.upload(formData);
+                  toast.success('Files uploaded successfully', { id: toastId });
+                  setFiles([]); // Clear files on success
                   onClose(true);
               } catch (e) {
                   console.error(e);
-                  alert('Upload failed');
+                  toast.error('Upload failed: ' + e.message, { id: toastId });
               } finally {
                   setIsUploading(false);
               }

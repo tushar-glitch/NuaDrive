@@ -5,9 +5,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { auth } from '../lib/api';
+import { useAuth } from '../components/auth/AuthContext';
+
+import { toast } from 'sonner';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -23,10 +27,12 @@ export default function Register() {
 
     try {
       const data = await auth.register(name, email, password);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      login(data.user);
+      toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setIsLoading(false);
     }

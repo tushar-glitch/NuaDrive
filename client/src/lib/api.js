@@ -6,8 +6,9 @@ export async function request(endpoint, options = {}) {
     ...options.headers,
   };
   
-  // Remove Content-Type if validation fails or if explicitly set to null/undefined to let browser handle multipart
-  if (options.body instanceof FormData || options.headers?.['Content-Type'] === undefined) {
+  // Remove Content-Type if body is FormData (let browser handle boundary)
+  // OR if explicitly set to null (to allow manual override)
+  if (options.body instanceof FormData || options.headers?.['Content-Type'] === null) {
       delete headers['Content-Type'];
   }
 
@@ -48,7 +49,9 @@ export const files = {
       body: formData,
       // The request helper typically adds Content-Type: application/json
       // We need to override headers to exclude Content-Type for FormData
-      headers: {}, 
+      headers: {
+        'Content-Type': null
+      }, 
     });
   },
   getDownloadLink: (id) => request(`/files/${id}/download`),
