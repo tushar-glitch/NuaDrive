@@ -5,6 +5,11 @@ export async function request(endpoint, options = {}) {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+  
+  // Remove Content-Type if validation fails or if explicitly set to null/undefined to let browser handle multipart
+  if (options.body instanceof FormData || options.headers?.['Content-Type'] === undefined) {
+      delete headers['Content-Type'];
+  }
 
   const config = {
     ...options,
@@ -31,4 +36,20 @@ export const auth = {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
   }),
+};
+
+export const files = {
+  list: () => request('/files'),
+  upload: (formData) => {
+    // We use a custom request here because we need to NOT set Content-Type
+    // so the browser can set the boundary for the FormData
+    return request('/files/upload', {
+      method: 'POST',
+      body: formData,
+      // The request helper typically adds Content-Type: application/json
+      // We need to override headers to exclude Content-Type for FormData
+      headers: {}, 
+    });
+  },
+  getDownloadLink: (id) => request(`/files/${id}/download`),
 };

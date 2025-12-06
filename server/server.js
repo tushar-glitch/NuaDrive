@@ -12,16 +12,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors({
-    origin: 'http://localhost:5173', // Vite default port
+    origin: 'http://localhost:5173',
     credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
 
+// keyID:
+// 0037469dbc702530000000001
+// keyName:
+// nua-drive
+// applicationKey:
+// K003W+GTfxqo69yuuY/H+OMQFIyNyto
+
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/files', require('./routes/fileRoutes'));
 app.get('/', (req, res) => {
     res.json({ message: 'Nua File Share API is running' });
 });

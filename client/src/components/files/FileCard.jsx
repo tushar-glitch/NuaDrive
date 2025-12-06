@@ -45,17 +45,40 @@ const getIconColor = (type) => {
   }
 };
 
+import { files as filesApi } from '../../lib/api';
+
 export default function FileCard({ file, onShare }) {
   const Icon = getFileIcon(file.type);
   const colorClass = getIconColor(file.type);
 
+  const handleDownload = async () => {
+    try {
+      // If we already have a signed url (optional optimization), but for now fetch fresh
+      const { downloadUrl } = await filesApi.getDownloadLink(file.id);
+      window.open(downloadUrl, '_blank');
+    } catch (error) {
+      console.error("Failed to get download link", error);
+    }
+  };
+
   return (
-    <div className="group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-indigo-100">
+    <div 
+      onClick={handleDownload}
+      className="group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-indigo-100 cursor-pointer"
+    >
       <div className="flex items-start justify-between">
         <div className={`p-3 rounded-lg transition-colors ${colorClass}`}>
           <Icon className="h-6 w-6" />
         </div>
-        <Button onClick={onShare} variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-indigo-600">
+        <Button 
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent opening file
+            onShare();
+          }} 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 -mr-2 text-slate-400 hover:text-indigo-600"
+        >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </div>
@@ -67,12 +90,14 @@ export default function FileCard({ file, onShare }) {
         <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
           <span className="flex items-center gap-1">
             <HardDrive className="h-3 w-3" />
-            {file.size}
+            {/* Format size if it's just a number */}
+            {typeof file.size === 'number' ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : file.size}
           </span>
           <span>•</span>
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {file.date}
+            {/* Format date if it's a string, or just show it */}
+            {new Date(file.date).toLocaleDateString()}
           </span>
         </div>
       </div>

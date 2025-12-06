@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, File, X } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { files as filesApi } from '../../lib/api';
 
 export default function FileUpload({ isOpen, onClose }) {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragEnter = (e) => {
@@ -102,11 +104,24 @@ export default function FileUpload({ isOpen, onClose }) {
         )}
 
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => onClose(false)} disabled={isUploading}>
             Cancel
           </Button>
-          <Button disabled={files.length === 0}>
-            Upload {files.length > 0 && `(${files.length})`}
+          <Button disabled={files.length === 0 || isUploading} onClick={async () => {
+              setIsUploading(true);
+              const formData = new FormData();
+              files.forEach(file => formData.append('files', file));
+              try {
+                  await filesApi.upload(formData);
+                  onClose(true);
+              } catch (e) {
+                  console.error(e);
+                  alert('Upload failed');
+              } finally {
+                  setIsUploading(false);
+              }
+          }}>
+            {isUploading ? 'Uploading...' : `Upload ${files.length > 0 ? `(${files.length})` : ''}`}
           </Button>
         </div>
       </div>
