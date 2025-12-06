@@ -6,17 +6,22 @@ import { request } from '../lib/api';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
-export default function FileViewer() {
-  const { uuid } = useParams();
+export default function FileViewer({ mode = 'protected' }) {
+  const { uuid, token } = useParams();
+  const identifier = mode === 'public' ? token : uuid;
+  
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [sheetContent, setSheetContent] = useState([]); // Shared state for CSV and Excel
+  const [sheetContent, setSheetContent] = useState([]);
 
   useEffect(() => {
     const fetchFile = async () => {
+      // Determine endpoints based on mode
+      const baseEndpoint = mode === 'public' ? '/files/public' : '/files/protected';
+
       try {
-        const data = await request(`/files/shared/${uuid}`);
+        const data = await request(`${baseEndpoint}/${identifier}`);
         setFile(data);
 
         // Check for CSV or Excel types
@@ -26,9 +31,9 @@ export default function FileViewer() {
 
         if (isCsv || isExcel) {
             try {
-                // Use proxy endpoint to avoid CORS issues with B2/S3
+                // Use proxy endpoint
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                const contentUrl = `${apiUrl}/files/shared/${uuid}/content`;
+                const contentUrl = `${apiUrl}${baseEndpoint}/${identifier}/content`;
                 
                 const response = await fetch(contentUrl, { credentials: 'include' });
                 
@@ -51,20 +56,24 @@ export default function FileViewer() {
         }
       } catch (err) {
         console.error(err);
-        if (err.status === 401 || err.message?.includes('401') || err.message?.includes('Access denied')) {
+        if (err.status === 410) {
+            setError('This shared link has expired.');
+            return;
+        }
+        if (err.status === 401 || err.message?.includes('401')) {
             window.location.href = '/login'; 
             return;
         }
-        setError('File not found or access denied. Please make sure you are logged in.');
+        setError('File not found or access denied.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (uuid) {
+    if (identifier) {
       fetchFile();
     }
-  }, [uuid]);
+  }, [identifier, mode]);
 
   if (isLoading) {
     return (

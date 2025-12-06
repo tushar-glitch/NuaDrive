@@ -41,7 +41,6 @@ export const auth = {
   }),
   logout: () => request('/auth/logout', { method: 'POST' }),
 };
-
 export const files = {
   list: () => request('/files'),
   upload: (formData) => {
@@ -59,4 +58,9 @@ export const files = {
   },
   getDownloadLink: (id) => request(`/files/${id}/download`),
   listShared: () => request('/files/shared-with-me'),
+  updateSettings: (id, settings) => request(`/files/${id}/settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  }),
 };
