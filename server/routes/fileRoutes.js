@@ -136,6 +136,10 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'Email is required' });
     }
 
+    if (email === req.user.email) {
+        return res.status(400).json({ error: 'You cannot share a file with yourself' });
+    }
+
     try {
         // Verify ownership
         const [files] = await pool.execute('SELECT * FROM files WHERE id = ? AND user_id = ?', [fileId, req.user.id]);

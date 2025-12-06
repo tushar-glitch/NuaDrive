@@ -14,6 +14,9 @@ export default function Dashboard() {
   const [activeShareFile, setActiveShareFile] = useState(null);
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all', 'image', 'document', 'other'
 
   const fetchFiles = async () => {
     setIsLoading(true);
@@ -36,6 +39,20 @@ export default function Dashboard() {
   useEffect(() => {
     fetchFiles();
   }, [activeTab]);
+
+  const filteredFiles = files.filter(file => {
+      const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const ext = file.type?.toLowerCase() || '';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+      const isDoc = ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx'].includes(ext);
+      
+      let matchesType = true;
+      if (filterType === 'image') matchesType = isImage;
+      if (filterType === 'document') matchesType = isDoc;
+      if (filterType === 'other') matchesType = !isImage && !isDoc;
+
+      return matchesSearch && matchesType;
+  });
 
   return (
     <div className="space-y-6">
@@ -87,14 +104,27 @@ export default function Dashboard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input 
             placeholder="Search files..." 
-            className="pl-9 border-0 bg-transparent focus-visible:ring-0 placeholder:text-slate-400" 
+            className="pl-9 border-none bg-transparent focus:ring-0"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="h-6 w-px bg-slate-200 mx-2" />
-        <Button variant="ghost" size="sm" className="text-slate-600">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
+        <div className="h-6 w-px bg-slate-200" />
+        <div className="flex gap-1">
+            {['all', 'image', 'document', 'other'].map(type => (
+                <button
+                    key={type}
+                    onClick={() => setFilterType(type)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+                        filterType === type 
+                        ? 'bg-indigo-100 text-indigo-700' 
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                >
+                    {type}
+                </button>
+            ))}
+        </div>
       </div>
 
       {/* File Grid */}
@@ -104,7 +134,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {files.map((file) => (
+          {filteredFiles.map((file) => (
             <FileCard 
               key={file.id} 
               file={file} 
