@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import FileCard from '../components/files/FileCard';
 import FileUpload from '../components/upload/FileUpload';
+import ShareModal from '../components/modals/ShareModal';
 
 // Mock data for demonstration
 const MOCK_FILES = [
@@ -17,6 +18,7 @@ const MOCK_FILES = [
 
 export default function Dashboard() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [activeShareFile, setActiveShareFile] = useState(null);
 
   return (
     <div className="space-y-6">
@@ -53,13 +55,23 @@ export default function Dashboard() {
       {/* File Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {MOCK_FILES.map((file) => (
-          <FileCard key={file.id} file={file} />
+          <FileCard 
+            key={file.id} 
+            file={file} 
+            onShare={() => setActiveShareFile(file)}
+          />
         ))}
       </div>
 
       <FileUpload 
         isOpen={isUploadOpen} 
         onClose={() => setIsUploadOpen(false)} 
+      />
+
+      <ShareModal
+        isOpen={!!activeShareFile}
+        onClose={() => setActiveShareFile(null)}
+        file={activeShareFile}
       />
     </div>
   );

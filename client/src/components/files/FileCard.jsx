@@ -45,7 +45,7 @@ const getIconColor = (type) => {
   }
 };
 
-export default function FileCard({ file }) {
+export default function FileCard({ file, onShare }) {
   const Icon = getFileIcon(file.type);
   const colorClass = getIconColor(file.type);
 
@@ -55,7 +55,7 @@ export default function FileCard({ file }) {
         <div className={`p-3 rounded-lg transition-colors ${colorClass}`}>
           <Icon className="h-6 w-6" />
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
+        <Button onClick={onShare} variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-indigo-600">
           <MoreVertical className="h-4 w-4" />
         </Button>
       </div>
