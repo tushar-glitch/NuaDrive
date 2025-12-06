@@ -93,6 +93,40 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
     }
 });
 
+// Proxy File Content Endpoint (Avoids CORS for Previews)
+router.get('/shared/:uuid/content', authMiddleware, async (req, res) => {
+    try {
+        const [files] = await pool.execute(
+            'SELECT filename, r2_key, file_type FROM files WHERE uuid = ?', 
+            [req.params.uuid]
+        );
+        
+        if (files.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const file = files[0];
+        
+        const command = new GetObjectCommand({
+            Bucket: process.env.B2_BUCKET_NAME,
+            Key: file.r2_key,
+        });
+
+        const data = await s3Client.send(command);
+        
+        // Set appropriate content type
+        if (file.file_type === 'csv') res.setHeader('Content-Type', 'text/csv');
+        if (file.file_type === 'json') res.setHeader('Content-Type', 'application/json');
+        
+        // Pipe the stream
+        data.Body.pipe(res);
+
+    } catch (error) {
+        console.error('Content Proxy Error:', error);
+        res.status(500).json({ error: 'Failed to retrieve file content' });
+    }
+});
+
 // Public Shared File Endpoint (Now Restricted to Logged-in Users)
 router.get('/shared/:uuid', authMiddleware, async (req, res) => {
     try {
@@ -110,20 +144,29 @@ router.get('/shared/:uuid', authMiddleware, async (req, res) => {
 
         const file = files[0];
         
-        const command = new GetObjectCommand({
+        // URL for forcing download (Attachment)
+        const downloadCommand = new GetObjectCommand({
             Bucket: process.env.B2_BUCKET_NAME,
             Key: file.r2_key,
             ResponseContentDisposition: `attachment; filename="${file.name}"`,
         });
+        const downloadUrl = await getSignedUrl(s3Client, downloadCommand, { expiresIn: 3600 });
 
-        const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        // URL for previewing (Inline) - Explicitly set inline
+        const previewCommand = new GetObjectCommand({
+            Bucket: process.env.B2_BUCKET_NAME,
+            Key: file.r2_key,
+            ResponseContentDisposition: `inline; filename="${file.name}"`,
+        });
+        const previewUrl = await getSignedUrl(s3Client, previewCommand, { expiresIn: 3600 });
 
         res.json({
             name: file.name,
             size: file.size,
             type: file.type,
             date: file.date,
-            downloadUrl
+            downloadUrl,
+            previewUrl
         });
     } catch (error) {
         console.error('Shared File Error:', error);

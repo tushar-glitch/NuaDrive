@@ -4,38 +4,54 @@ import { File, Download, AlertCircle, Loader } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { request } from '../lib/api';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export default function FileViewer() {
   const { uuid } = useParams();
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [csvContent, setCsvContent] = useState([]);
+  const [sheetContent, setSheetContent] = useState([]); // Shared state for CSV and Excel
 
   useEffect(() => {
     const fetchFile = async () => {
       try {
-        // Use the public shared endpoint
         const data = await request(`/files/shared/${uuid}`);
         setFile(data);
 
-        // If CSV, fetch content (rest of CSV logic...)
-        if (data.type?.toLowerCase() === 'csv') {
+        // Check for CSV or Excel types
+        const type = data.type?.toLowerCase();
+        const isExcel = ['xlsx', 'xls', 'excel', 'spreadsheet'].includes(type);
+        const isCsv = type === 'csv';
+
+        if (isCsv || isExcel) {
             try {
-                const response = await fetch(data.downloadUrl);
-                const text = await response.text();
-                // Simple CSV parser (split by newline and comma)
-                const rows = text.split('\n').map(row => row.split(','));
-                setCsvContent(rows.slice(0, 50)); // Limit to first 50 rows
+                // Use proxy endpoint to avoid CORS issues with B2/S3
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const contentUrl = `${apiUrl}/files/shared/${uuid}/content`;
+                
+                const response = await fetch(contentUrl, { credentials: 'include' });
+                
+                if (isExcel) {
+                    const blob = await response.blob();
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    setSheetContent(jsonData.slice(0, 50));
+                } else {
+                    const text = await response.text();
+                    const rows = text.split('\n').map(row => row.split(','));
+                    setSheetContent(rows.slice(0, 50));
+                }
             } catch (e) {
-                console.error("Failed to parse CSV", e);
+                console.error("Failed to parse spreadsheet", e);
             }
         }
       } catch (err) {
         console.error(err);
         if (err.status === 401 || err.message?.includes('401') || err.message?.includes('Access denied')) {
-            // Redirect to login if not authenticated
-            // We could store the return URL, but for now just redirect
             window.location.href = '/login'; 
             return;
         }
@@ -71,6 +87,7 @@ export default function FileViewer() {
   }
 
   const isImage = ['image', 'jpg', 'png', 'jpeg', 'gif'].includes(file.type?.toLowerCase());
+  const isSheet = ['csv', 'xlsx', 'xls', 'excel', 'spreadsheet'].includes(file.type?.toLowerCase());
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6">
@@ -101,21 +118,21 @@ export default function FileViewer() {
         <div className="p-8 bg-slate-50 min-h-[400px] flex items-center justify-center overflow-auto">
             {isImage ? (
                 <img 
-                    src={file.downloadUrl} 
+                    src={file.previewUrl} 
                     alt={file.name} 
                     className="max-h-[600px] w-auto rounded-lg shadow-lg object-contain"
                 />
             ) : file.type?.toLowerCase() === 'pdf' ? (
                 <iframe 
-                    src={file.downloadUrl} 
+                    src={file.previewUrl} 
                     className="w-full h-[800px] rounded-lg shadow-sm border border-slate-200"
                     title="PDF Preview"
                 />
-            ) : file.type?.toLowerCase() === 'csv' ? (
+            ) : isSheet ? (
                 <div className="w-full max-h-[600px] overflow-auto bg-white rounded-lg border border-slate-200 shadow-sm">
                     <table className="min-w-full divide-y divide-slate-200">
                         <tbody className="divide-y divide-slate-200">
-                            {csvContent.map((row, rowIndex) => (
+                            {sheetContent.map((row, rowIndex) => (
                                 <tr key={rowIndex} className={rowIndex === 0 ? "bg-slate-50 font-semibold" : ""}>
                                     {row.map((cell, cellIndex) => (
                                         <td key={cellIndex} className="px-4 py-2 text-sm text-slate-700 whitespace-nowrap border-r border-slate-100 last:border-0">
@@ -126,13 +143,13 @@ export default function FileViewer() {
                             ))}
                         </tbody>
                     </table>
-                    {csvContent.length === 0 && <p className="p-4 text-center text-slate-500">Empty CSV</p>}
+                    {sheetContent.length === 0 && <p className="p-4 text-center text-slate-500">Empty or Loading Spreadsheet</p>}
                 </div>
             ) : (
                 <div className="text-center">
                      <File className="h-24 w-24 text-slate-300 mx-auto mb-4" />
                      <p className="text-slate-500 font-medium">Preview not available for this file type.</p>
-                     <p className="text-slate-400 text-sm mt-1">Only Image, PDF, and CSV previews are currently supported.</p>
+                     <p className="text-slate-400 text-sm mt-1">Only Image, PDF, Excel and CSV previews are currently supported.</p>
                 </div>
             )}
         </div>

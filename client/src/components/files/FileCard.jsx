@@ -25,6 +25,8 @@ const getFileIcon = (type) => {
     case 'excel':
     case 'csv':
     case 'spreadsheet':
+    case 'xls':
+    case 'xlsx':
       return FileSpreadsheet;
     case 'code':
     case 'js':
@@ -39,7 +41,12 @@ const getIconColor = (type) => {
   switch (type?.toLowerCase()) {
     case 'pdf': return 'text-red-600 bg-red-50 group-hover:bg-red-100';
     case 'image': return 'text-purple-600 bg-purple-50 group-hover:bg-purple-100';
-    case 'excel': return 'text-green-600 bg-green-50 group-hover:bg-green-100';
+    case 'excel': 
+    case 'spreadsheet':
+    case 'csv':
+    case 'xls':
+    case 'xlsx':
+      return 'text-green-600 bg-green-50 group-hover:bg-green-100';
     case 'code': return 'text-blue-600 bg-blue-50 group-hover:bg-blue-100';
     default: return 'text-indigo-600 bg-indigo-50 group-hover:bg-indigo-100';
   }
@@ -89,8 +96,12 @@ export default function FileCard({ file, onShare, showOwner }) {
         <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
           <span className="flex items-center gap-1">
             <HardDrive className="h-3 w-3" />
-            {/* Format size if it's just a number */}
-            {typeof file.size === 'number' ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : file.size}
+            {/* Format size: KB if < 1MB, else MB */}
+            {typeof file.size === 'number' ? (
+                file.size < 1024 * 1024 
+                    ? (file.size / 1024).toFixed(2) + ' KB'
+                    : (file.size / 1024 / 1024).toFixed(2) + ' MB'
+            ) : file.size}
           </span>
           <span>•</span>
           <span className="flex items-center gap-1">
