@@ -1,5 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 function App() {
   return (
@@ -15,8 +17,18 @@ function App() {
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                   Simple, fast, and secure file sharing for everyone. Upload your files and share them instantly with a link.
                 </p>
+                <div className="mt-8 flex gap-4 justify-center">
+                   <Link to="/register" className="px-6 py-3 text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
+                     Get Started
+                   </Link>
+                   <Link to="/login" className="px-6 py-3 text-base font-medium text-indigo-600 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-lg transition-colors">
+                     Sign In
+                   </Link>
+                </div>
               </div>
             } />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
           </Route>
         </Routes>
       </div>
