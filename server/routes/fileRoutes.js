@@ -6,8 +6,30 @@ const pool = require('../db');
 const s3Client = require('../s3Client');
 const authMiddleware = require('../middleware/authMiddleware');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const router = express.Router();
+
+// Smart Compression Configuration
+const COMPRESSIBLE_MIME_TYPES = [
+    'text/plain', 'text/html', 'text/css', 'text/javascript', 'text/csv', 'text/xml',
+    'application/json', 'application/javascript', 'application/xml', 'application/x-yaml',
+    'text/markdown', 'image/svg+xml',
+    // User requested Images and PDFs
+    'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+];
+
+const IS_COMPRESSIBLE = (mime, ext) => {
+    if (COMPRESSIBLE_MIME_TYPES.includes(mime)) return true;
+    // Fallback for extensions
+    const exts = [
+        'txt', 'md', 'csv', 'json', 'log', 'js', 'jsx', 'ts', 'tsx', 'html', 
+        'css', 'scss', 'xml', 'svg', 'sql',
+        'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'
+    ];
+    if (exts.includes(ext.toLowerCase())) return true;
+    return false;
+};
 
 // Helper: Log Activity
 const logActivity = async (fileId, userId, action, details, req) => {
@@ -41,23 +63,46 @@ router.post('/upload', authMiddleware, upload.array('files'), async (req, res) =
             const r2Key = `${userId}/${crypto.randomUUID()}.${fileExtension}`;
             const fileUuid = crypto.randomUUID();
             
+            let bufferToUpload = file.buffer;
+            let contentEncoding = undefined;
+            const originalSize = file.size;
+
+            // Smart Compression Logic
+            if (IS_COMPRESSIBLE(file.mimetype, fileExtension)) {
+                try {
+                    const compressed = zlib.gzipSync(file.buffer);
+                    // Only use compressed version if it actually saves space
+                    if (compressed.length < originalSize) {
+                        bufferToUpload = compressed;
+                        contentEncoding = 'gzip';
+                        console.log(`[Upload] Compressed ${file.originalname} (${originalSize} -> ${compressed.length} bytes)`);
+                    }
+                } catch (compErr) {
+                    console.warn(`[Upload] Compression skipped for ${file.originalname}:`, compErr);
+                }
+            }
+            
             await s3Client.send(new PutObjectCommand({
                 Bucket: process.env.B2_BUCKET_NAME,
                 Key: r2Key,
-                Body: file.buffer,
+                Body: bufferToUpload,
                 ContentType: file.mimetype,
+                ContentEncoding: contentEncoding, // Browser will auto-decompress if this is set
+                Metadata: {
+                    'original-size': String(originalSize)
+                }
             }));
 
             const [result] = await pool.execute(
                 'INSERT INTO files (user_id, filename, r2_key, file_type, size, uuid, public_token) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [userId, file.originalname, r2Key, fileExtension, file.size, fileUuid, fileUuid]
+                [userId, file.originalname, r2Key, fileExtension, originalSize, fileUuid, fileUuid]
             );
 
             uploadedFiles.push({
                 id: result.insertId,
                 uuid: fileUuid,
                 name: file.originalname,
-                size: file.size,
+                size: originalSize,
                 date: new Date(),
                 type: fileExtension
             });
