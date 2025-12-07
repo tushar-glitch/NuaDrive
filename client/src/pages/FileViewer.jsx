@@ -22,6 +22,8 @@ export default function FileViewer({ mode = 'protected' }) {
 
       try {
         const data = await request(`${baseEndpoint}/${identifier}`);
+        console.log(data);
+        console.log("tushar");
         setFile(data);
 
         // Check for CSV or Excel types
@@ -116,7 +118,10 @@ export default function FileViewer({ mode = 'protected' }) {
             </div>
             <Button onClick={() => {
                 toast.success('Download started');
-                window.location.href = file.downloadUrl;
+                // Construct download URL pointing to our backend for logging
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const baseEndpoint = mode === 'public' ? '/files/public' : '/files/protected';
+                window.location.href = `${apiUrl}${baseEndpoint}/${identifier}/download`;
             }}>
                 <Download className="h-4 w-4 mr-2" />
                 Download
