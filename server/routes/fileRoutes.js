@@ -10,18 +10,15 @@ const zlib = require('zlib');
 
 const router = express.Router();
 
-// Smart Compression Configuration
 const COMPRESSIBLE_MIME_TYPES = [
     'text/plain', 'text/html', 'text/css', 'text/javascript', 'text/csv', 'text/xml',
     'application/json', 'application/javascript', 'application/xml', 'application/x-yaml',
     'text/markdown', 'image/svg+xml',
-    // User requested Images and PDFs
     'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'
 ];
 
 const IS_COMPRESSIBLE = (mime, ext) => {
     if (COMPRESSIBLE_MIME_TYPES.includes(mime)) return true;
-    // Fallback for extensions
     const exts = [
         'txt', 'md', 'csv', 'json', 'log', 'js', 'jsx', 'ts', 'tsx', 'html', 
         'css', 'scss', 'xml', 'svg', 'sql',
@@ -31,7 +28,6 @@ const IS_COMPRESSIBLE = (mime, ext) => {
     return false;
 };
 
-// Helper: Log Activity
 const logActivity = async (fileId, userId, action, details, req) => {
     try {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -67,11 +63,9 @@ router.post('/upload', authMiddleware, upload.array('files'), async (req, res) =
             let contentEncoding = undefined;
             const originalSize = file.size;
 
-            // Smart Compression Logic
             if (IS_COMPRESSIBLE(file.mimetype, fileExtension)) {
                 try {
                     const compressed = zlib.gzipSync(file.buffer);
-                    // Only use compressed version if it actually saves space
                     if (compressed.length < originalSize) {
                         bufferToUpload = compressed;
                         contentEncoding = 'gzip';
@@ -128,13 +122,11 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-// Update File Settings (e.g., Link Expiry)
 router.patch('/:id/settings', authMiddleware, async (req, res) => {
     const { linkExpiresAt } = req.body;
     const fileId = req.params.id;
 
     try {
-        // Verify ownership
         const [files] = await pool.execute('SELECT * FROM files WHERE id = ? AND user_id = ?', [fileId, req.user.id]);
         if (files.length === 0) {
             return res.status(404).json({ error: 'File not found' });
@@ -147,7 +139,6 @@ router.patch('/:id/settings', authMiddleware, async (req, res) => {
             [expirationDate, fileId]
         );
 
-        // Log Activity
         await logActivity(fileId, req.user.id, 'update_settings', `Updated link expiry: ${expirationDate ? expirationDate.toISOString() : 'Never'}`, req);
 
         res.json({ message: 'File settings updated' });
@@ -180,9 +171,6 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
     }
 });
 
-// --- PROTECTED ROUTES (Owner/Invited Only, No Expiry) ---
-
-// Protected: Content Proxy
 router.get('/protected/:uuid/content', authMiddleware, async (req, res) => {
     try {
         const [files] = await pool.execute(
@@ -211,7 +199,6 @@ router.get('/protected/:uuid/content', authMiddleware, async (req, res) => {
     }
 });
 
-// Protected: Metadata & Links
 router.get('/protected/:uuid', authMiddleware, async (req, res) => {
     try {
         console.log(`[Debug] Accessing Protected: UUID=${req.params.uuid}, User=${req.user.email} (${req.user.id})`);
@@ -302,11 +289,7 @@ router.get('/protected/:uuid/download', authMiddleware, async (req, res) => {
 });
 
 
-// --- PUBLIC ROUTES (Share Link Only, Enforces Expiry) ---
-// Note: Keeping authMiddleware to align with previous "Logged In Users Only" restriction.
-// To make truly public, remove authMiddleware from these two.
 
-// Public: Content Proxy
 router.get('/public/:token/content', authMiddleware, async (req, res) => {
     try {
         const [files] = await pool.execute(
@@ -447,8 +430,7 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'File not found or access denied' });
         }
 
-        // Add to shares table
-        // We set expires_at: null because UI removed support, but DB has it.
+
         await pool.execute(
             'INSERT INTO shares (file_id, shared_with_email, expires_at) VALUES (?, ?, ?)',
             [fileId, email, null]
